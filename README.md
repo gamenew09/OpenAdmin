@@ -7,6 +7,8 @@ If you want to install OpenAdmin into your place, you can get the model [here](#
 
 I am planing on creating a OpenAdmin installer plugin, which will allow you to install OpenAdmin easily and easily edit settings without going into game .
 
+If you ever find an issue, please create an issue by either clicking ``Issues`` at the top of the page and then click on ``New Issue`` or by clicking [here](https://github.com/gamenew09/OpenAdmin/issues/new).
+
 ## Editing the Source
 **Only do this if you are wanting to contribute to the source code of OpenAdmin. If you are just wanting to add OpenAdmin to your place refer to the step in [Installing](#Installing).**
 
