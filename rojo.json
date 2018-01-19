@@ -1,0 +1,10 @@
+{
+  "name": "OpenAdmin",
+  "servePort": 8000,
+  "partitions": {
+    "OpenAdmin_Main": {
+      "path": "src",
+      "target": "ServerScriptService.OpenAdmin"
+    }
+  }
+}

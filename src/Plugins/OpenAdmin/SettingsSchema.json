@@ -1,0 +1,14 @@
+[
+    {
+        "Name": "CommandPrefix",
+        "Type": "String",
+        "Default": "!",
+        "Root": true
+    },
+    {
+        "Name": "GroupId",
+        "Type": "Int",
+        "Default": 0,
+        "Root": true
+    }
+]
