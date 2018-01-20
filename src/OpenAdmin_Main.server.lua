@@ -11,6 +11,7 @@ local PluginManager = require(SModules:WaitForChild("PluginManager"))
 
 -- Register groups
 
+--[[
 GroupManager:CreateSystemGroups()
 
 local DEBUG_OWNERSHIP = false
@@ -27,7 +28,11 @@ end)
 if game.CreatorType == Enum.CreatorType.User then
 	GroupManager:Owner():AddPlayer(game.CreatorId)
 end
+--]]
 
 PluginManager:LoadPlugins() -- Load OpenAdmin plugins.
+
+GroupManager:LoadGroupManager()
+PluginManager:CallAllPlugins("GroupsInitialized")
 
 ChatModule.Parent = game.Chat:WaitForChild("ChatModules") -- Move ChatModule that is used for handling players sending commands to game.Chat.ChatModules

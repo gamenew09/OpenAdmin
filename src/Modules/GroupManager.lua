@@ -1,215 +1,171 @@
 local module = {}
 
-local groups = {}
+local GroupManagerModule
 
-function module:Create(groupName, displayName, rank)
-	if groups[groupName] then
-		return false
-	end	
-	
-	local group = {}
-	
-	group.DevName = groupName
-	group.DisplayName = displayName
-	
-	group.Rank = rank or 1
+local Handlers = {}
 
-	group.Permissions = {}
-	group.ImmunityTags = {}	
+function module:RegisterHandler(handlerName)
+	local env = getfenv(2)
+
+	local handlerModule = env["script"].Parent:WaitForChild("GroupManagers"):WaitForChild(handlerName)
+
+	Handlers[handlerModule.Name] = require(handlerModule)
+end
+
+function module:LoadGroupManager()
+	local ManagerName = "Default" -- TODO: Add this as a setting.
 	
-	group.SuperAdmin = false -- Does this group always have ALL PERMISSIONS and IMMUNITY TAGS?	
-	
-	group.Players = {}
-	
-	group["__index"] = function (t, k)
+	if not Handlers[ManagerName] then
+		error(string.format("[OpenAdmin] [GroupManager] Group Manager \"%s\" does not exist or has not been registered using GroupManager:RegisterHandler", ManagerName))
+	end
+
+	GroupManagerModule = Handlers[ManagerName]
+
+	-- TODO: Add a way to access settings.
+
+	if type(GroupManagerModule["Initialize"]) == "function" then
+		GroupManagerModule:Initialize()
+	end
+
+	print(string.format("[OpenAdmin] [GroupManager] Using Group Manager Module \"%s\"!", ManagerName))
+end
+
+local function ToUserId(ply)
+    if typeof(ply) ~= "Instance" or typeof(ply) ~= "number" then
+        return nil
+    end
+
+    if typeof(ply) == "Instance" and ply:IsA("Player") then
+        return ply.UserId
+    elseif typeof(ply) == "number" then
+        return ply
+    else
+        return nil
+    end
+end
+
+function mt_group_equ(self, other)
+    return self.Name == other.Name
+end
+
+-- Group Management
+
+function module:AddGroup(groupName)
+	return GroupManagerModule:AddGroup(groupName)
+end
+
+function module:RemoveGroup(groupName)
+	return GroupManagerModule:RemoveGroup(groupName)
+end
+
+function module:GetGroups() -- TODO: Copy table given by module
+	return GroupManagerModule:GetGroups()
+end
+
+-- Player Management
+
+function module:AddPlayerToGroup(userId, groupName)
+    return GroupManagerModule:AddPlayerToGroup(userId, groupName)
+end
+
+function module:GetPlayersInGroup(groupName)
+    return GroupManagerModule:GetPlayersInGroup(groupName)
+end
+
+function module:RemovePlayerFromGroup(userId, groupName)
+    return GroupManagerModule:RemovePlayerFromGroup(userId, groupName)
+end
+
+function module:IsPlayerInGroup(groupName, ply)
+    local players = module:GetPlayersInGroup(groupName)
+    local uid = ToUserId(ply)
+
+    for _, userid in pairs(players) do
+        if userid == uid then
+            return true
+        end
+    end
+    return false
+end
+
+-- Permission Management
+
+function module:AddPermissionToGroup(permission, groupName)
+    return GroupManagerModule:AddPermissionToGroup(userId, groupName)
+end
+
+function module:GetPermissions(groupName)
+    return GroupManagerModule:GetPermissions(groupName)
+end
+
+function module:RemovePermissionFromGroup(permission, groupName)
+    return GroupManagerModule:RemovePermissionFromGroup(userId, groupName)
+end
+
+function module:DoesGroupHavePermission(groupName, perm)
+    local players = module:GetPermissions(groupName)
+
+    for _, permission in pairs(players) do
+        if permission == perm then
+            return true
+        end
+    end
+
+    return false
+end
+
+-- Object Oriented Programming
+
+function module:AsObject(groupName)
+    local group = {}
+
+    group.Name = groupName
+
+    -- Player Management
+
+    function group:AddPlayer(ply)
+        return module:AddPlayerToGroup(ToUserId(ply), group.Name)
+    end
+
+    function group:IsPlayerIn(ply)
+        return module:IsPlayerInGroup(group.Name, ply)
+    end
+
+    function group:RemovePlayer(ply)
+        return module:RemovePlayerFromGroup(ToUserId(ply), group.Name)
+    end
+
+    -- Permissions
+
+    function group:AddPermission(perm)
+        return module:AddPermissionToGroup(perm, group.Name)
+    end
+
+    function group:RemovePermission(perm)
+        return module:RemovePermissionFromGroup(perm, group.Name)
+    end
+
+    function group:HasPermission(perm)
+        return module:DoesGroupHavePermission(group.Name, perm)
+    end
+
+    group["__index"] = function (t, k)
+        if k == "Players" then
+            return module:GetPlayersInGroup(groupName)
+        elseif k == "Permissions" then
+            return module:GetPermissionsInGroup(groupName)
+        end
+
 		return group[k]
-	end	
+    end
 
-	function group:CanTargetPlayer(ply)
-		
-	end
-	
-	function group:AddPlayer(ply)
-		if type(ply) == "userdata" and ply:IsA("Player") then
-			ply = ply.UserId
-		elseif type(ply) ~= "number" then
-			error("Argument \"ply\" must be a Player or number.")
-		end
+    group["__tostring"] = function (self)
+        return "Group[Name=".. group.Name .."]"
+    end
 
-		if group:IsPlayerIn(ply) then
-			return false
-		end		
-		
-		table.insert(group.Players, ply)
-		return true
-	end
-	
-	function group:IsPlayerIn(ply)
-		if type(ply) == "userdata" and ply:IsA("Player") then
-			ply = ply.UserId
-		elseif type(ply) ~= "number" then
-			error("Argument \"ply\" must be a Player or number.")
-		end
-		
-		for i,v in pairs(group.Players) do
-			if v == ply then
-				return true
-			end
-		end
-		return false
-	end	
-	
-	function group:RemovePlayer(ply)
-		if type(ply) == "userdata" and ply:IsA("Player") then
-			ply = ply.UserId
-		elseif type(ply) ~= "number" then
-			error("Argument \"ply\" must be a Player or number.")
-		end
-		
-		if not group:IsPlayerIn(ply) then
-			return false
-		end				
-		
-		table.remove(group.Players, ply)
-		return true
-	end
-	
-	function group:AddPermission(perm) 
-		if type(perm) ~= "string" and type(perm) ~= "table" then error("Argument \"perm\" must be a string or a table.") end		
-		
-		if group.SuperAdmin then
-			return false
-		end
-		
-		if type(perm) == "table" then
-			local tbl = {}
-			for i,v in pairs(perm) do
-				table.insert(tbl, group:AddPermission(v))
-			end
-			return tbl
-		else
-			if group:HasPermission(perm) then
-				return false
-			end
-			table.insert(group.Permissions, perm)
-			return true
-		end
-	end
-	
-	function group:RemovePermission(perm)
-		if type(perm) ~= "string" then error("Argument \"perm\" must be a string.") end			
-		
-		if group.SuperAdmin then
-			return false
-		end			
-		
-		for i,v in pairs(group.Permissions) do
-			if v == perm then
-				table.remove(group.Permissions, i)
-				return true
-			end
-		end
-		return false
-	end
-	
-	function group:HasPermission(perm)
-		if type(perm) ~= "string" then error("Argument \"perm\" must be a string.") end			
-		
-		if group.SuperAdmin then
-			return true -- No matter what, Super Admin groups always have all permissions.
-		end			
-		
-		for i,v in pairs(group.Permissions) do
-			if v == perm then
-				return true
-			end
-		end
-		return false
-	end
-	
-	group["__newindex"] = function (t, k, v)
-		if k == "DisplayName" then
-			if type(v) == "string" then
-				group[k] = v
-				return
-			else
-				error(string.format("Property \"%s\" must be a string.", k))
-			end
-		elseif k == "SuperAdmin" then
-			if type(v) == "boolean" then
-				group[k] = v
-				return
-			else
-				error(string.format("Property \"%s\" must be a boolean.", k))
-			end
-		end
-		error("Group is read-only.")
-	end	
-	
-	groups[groupName] = setmetatable({}, group)
-	
-	return groups[groupName]
-end
-
-function module:GetGroupsPlayerIsIn(ply)
-	if type(ply) == "userdata" and ply:IsA("Player") then
-		ply = ply.UserId
-	elseif type(ply) ~= "number" then
-		error("Argument \"ply\" must be a Player or number.")
-	end
-	
-	local tbl = {}	
-	
-	for i,group in pairs(groups) do
-		if group:IsPlayerIn(ply) then
-			table.insert(tbl, group)
-		end
-	end
-	
-	return tbl
-end
-
-function moudle:CanGroupTargetPlayer(group, ply)
-	local groups = module:GetGroupsPlayerIsIn(ply)
-
-	table.sort(groups, function (a, b)
-		return (a.Rank < b.Rank)
-	end)
-
-	local highestRank = groups[1].Rank
-
-	print(highestRank)
-end
-
-function module:CreateSystemGroups()
-	local ownerGroup = module:Create("owner", "Owner")
-
-	ownerGroup.SuperAdmin = true -- Tells OpenAdmin that this group has all permissions and immunity tags.
-	
-	local everyoneGroup = module:Create("everyone", "Everyone")
-	local adminGroup = module:Create("admin", "Admin")
-end
-
-function module:Everyone()
-	return module:Get("everyone")
-end
-
-function module:Owner()
-	return module:Get("owner")
-end
-
-function module:Admin()
-	return module:Get("admin")
-end
-
-function module:Get(groupName)
-	return groups[groupName]
-end
-
--- Functions that allow plugins to extend group functionality
-
-function module:RegisterHandler(moduleName)
-
+    group["__eq"] = mt_group_equ -- Do two groups equal?
+    
+    return setmetatable({}, group)
 end
 
 return module

@@ -31,6 +31,11 @@ module.GroupSettingsSchema = { -- These settings are per-group.
 
 local groups = {}
 
+function module:Initialize()
+    module:AddGroup("Everyone")
+    module:AddGroup("Admin")
+end
+
 -- List of Groups
 
 --[[
@@ -38,6 +43,10 @@ local groups = {}
         groupName - String - The name of the group that is going to be added.
 --]]
 function module:AddGroup(groupName)
+    if groups[groupName] then
+        return false
+    end
+
     groups[groupName] = {
         ["Permissions"] = { }, -- Permissions as strings
         ["Players"] = { }
