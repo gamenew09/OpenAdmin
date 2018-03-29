@@ -3,8 +3,19 @@ local module = {}
 local Settings = require(script.Parent:WaitForChild("Settings"))
 local CmdManager = require(script.Parent:WaitForChild("CommandManager"))
 local ExtPlayer = require(script.Parent:WaitForChild("ExtPlayer"))
+local GenericTarget = require(script.Parent:WaitForChild("GenericTarget"))
 
 --local text = [[I "am" 'the text' and "some more text with '" and "escaped \" text"]]
+
+local ChatService -- The ChatService object form OpenAdmin_ChatModule
+
+function module:SetChatService(cs)
+	ChatService = cs
+end
+
+function module:GetChatService()
+	return ChatService
+end
 
 local function StringToRbxObject(text, startAt)
 	local o = startAt
@@ -57,7 +68,7 @@ function module:GenerateUsage(cmdModule)
 					final = final .. schemaArg.Name .. rangeString
 				else
 					final = final .. i .. rangeString
-					warn(string.format("[OpenAdmin] [ChatManager] Argument %i does not have a name! You really should have a name for arguments.", i))
+					warn(string.format("[" .. (Settings["BrandingName"] or "OpenAdmin") .. "] [ChatManager] Argument %i does not have a name! You really should have a name for arguments.", i))
 				end
 				
 				if schemaArg.Optional then
@@ -70,7 +81,7 @@ function module:GenerateUsage(cmdModule)
 					final = final .. schemaArg.Name
 				else
 					final = final .. i
-					warn(string.format("[OpenAdmin] [ChatManager] Argument %i does not have a name! You really should have a name for arguments.", i))
+					warn(string.format("[" .. (Settings["BrandingName"] or "OpenAdmin") .. "] [ChatManager] Argument %i does not have a name! You really should have a name for arguments.", i))
 				end
 				
 				if schemaArg.Optional then
@@ -198,25 +209,35 @@ local function ParseCmd(text, cmd, sender)
 	for i, v in pairs(strArgTbl) do
 		local schemaArg = cmdArgSchema[i]
 		if schemaArg.Type == "Target" then
+			local apars = schemaArg.Arguments
 			local usernumid = tonumber(v)
 			if usernumid then
 				local ply = game.Players:GetPlayerByUserId(usernumid) -- Find player by userid.
-				if not ply then
+				if not ply and not apars.AllowInvalidObject then
 					return false, string.format("Invalid argument %i: Must be a player that is in-game.", i)
 				end
-				table.insert(tbl, ExtPlayer.fromPlayer(ply))
+				if apars.IgnoreSelf and ply == sender:GetPlayer() then
+					return false, string.format("Invalid argument %i: You cannot target yourself!", i)
+				end
+				table.insert(tbl, GenericTarget(ply))
 			else
-				if v:lower() == "me" or v == "@me" then -- Check if the sender wants to target his/herself.
-					if not sender:GetPlayer() then
+				if v:lower() == "me" or v == "@me" or v == "^" or v == "@p" then -- Check if the sender wants to target his/herself.
+					if not sender:GetPlayer() and not apars.AllowInvalidObject then
 						return false, string.format("Invalid argument %i: You must be a valid player!", i)
 					end
-					table.insert(tbl, ExtPlayer.fromPlayer(sender:GetPlayer()))
+					if apars.IgnoreSelf then
+						return false, string.format("Invalid argument %i: You cannot target yourself!", i)
+					end
+					table.insert(tbl, GenericTarget(sender:GetPlayer()))
 				else
 					local ply = FindFirstChildCaseInsensitive(game.Players, v) -- Find player by username.
-					if not ply then
+					if not ply and not apars.AllowInvalidObject then
 						return false, string.format("Invalid argument %i: Must be a player that is in-game.", i)
 					end
-					table.insert(tbl, ExtPlayer.fromPlayer(ply))
+					if apars.IgnoreSelf and ply == sender:GetPlayer() then
+						return false, string.format("Invalid argument %i: You cannot target yourself!", i)
+					end
+					table.insert(tbl, GenericTarget(ply))
 				end
 			end
 		elseif schemaArg.Type == "Number" then
@@ -224,7 +245,7 @@ local function ParseCmd(text, cmd, sender)
 			if number then
 				local apars = schemaArg.Arguments
 				if apars then
-					local rangeString = "INVALID, CONTACT DEVELOPERS OF GAME/OPENADMIN"
+					local rangeString = "INVALID, CONTACT DEVELOPERS OF GAME AND/OR OPENADMIN"
 					if apars.Minimum and apars.Maximum then
 						rangeString = "be in the range of "..apars.Minimum.. " to "..apars.Maximum
 					elseif apars.Minimum then
@@ -246,8 +267,7 @@ local function ParseCmd(text, cmd, sender)
 		elseif schemaArg.Type == "String" then
 			local apars = schemaArg.Arguments
 			if apars then
-				if apars.Filtered and not game:GetService("RunService"):IsStudio() then -- The string needs to be filtered.
-					-- TODO: Handle filtering.
+				if apars.Filtered and not game:GetService("RunService"):IsStudio() then -- The string needs to be filtered. If we are in studio, we can just ignore filtering for now.
 					local texto = getTextObject(v)
 					if not texto then
 						return false, string.format("Invalid argument %i: Failed to filter your string, try again.", i)
@@ -267,11 +287,11 @@ local function ParseCmd(text, cmd, sender)
 			end
 		elseif schemaArg.Type == "ObjectTarget" then
 			local o = StringToRbxObject(v)
-			if not o then
+			if not o and not o.AllowInvalidObject then
 				return false, string.format("Invalid argument %i: Must be a valid object target.", i)
 			end
 			
-			table.insert(tbl, o)
+			table.insert(tbl, GenericTarget(o))
 		end
 	end
 	
@@ -296,13 +316,13 @@ function module:OnChat(speaker, msg, channel)
 			if cmdModule.PermissionsNeeded and type(cmdModule.PermissionsNeeded) == "table" then
 				for i,v in pairs(cmdModule.PermissionsNeeded) do
 					if not sendereply:HasPermission(v) then
-						speaker:SendSystemMessage(string.format("[OpenAdmin] You must have the permission \"%s\"", v), channel.Name)
+						speaker:SendSystemMessage(string.format("[" .. (Settings["BrandingName"] or "OpenAdmin") .. "] You must have the permission \"%s\"", v), channel.Name)
 						return true -- The command shouldn't appear in chat, but let the user know what went wrong.
 					end
 				end
 			elseif type(cmdModule.PermissionsNeeded) == "string" then
 				if not sendereply:HasPermission(cmdModule.PermissionsNeeded) then
-					speaker:SendSystemMessage(string.format("[OpenAdmin] You must have the permission \"%s\"", cmdModule.PermissionsNeeded), channel.Name)
+					speaker:SendSystemMessage(string.format("[" .. (Settings["BrandingName"] or "OpenAdmin") .. "] You must have the permission \"%s\"", cmdModule.PermissionsNeeded), channel.Name)
 					return true -- The command shouldn't appear in chat, but let the user know what went wrong.
 				end
 			end			
@@ -317,11 +337,11 @@ function module:OnChat(speaker, msg, channel)
 			local usageString = "\n\tUsage: " .. module:GenerateUsage(cmdModule)			
 			
 			if not res then
-				speaker:SendSystemMessage("[OpenAdmin] " .. msg .. usageString, channel.Name) -- Let the sender know that the command arguments or whatever caused an error.
+				speaker:SendSystemMessage("[" .. (Settings["BrandingName"] or "OpenAdmin") .. "] " .. msg .. usageString, channel.Name) -- Let the sender know that the command arguments or whatever caused an error.
 			else
 				local res, msg = cmdModule:Run(sendereply, res)
 				if not res then
-					speaker:SendSystemMessage("[OpenAdmin] " .. (msg or "An error occured while trying to run \"" .. prefix .. cmdName .. "\"!" .. usageString), channel.Name)
+					speaker:SendSystemMessage("[" .. (Settings["BrandingName"] or "OpenAdmin") .. "] " .. (msg or "An error occured while trying to run \"" .. prefix .. cmdName .. "\"!" .. usageString), channel.Name)
 				end
 			end
 		end

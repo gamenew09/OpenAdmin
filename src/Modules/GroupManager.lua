@@ -31,10 +31,6 @@ function module:LoadGroupManager()
 end
 
 local function ToUserId(ply)
-    if typeof(ply) ~= "Instance" or typeof(ply) ~= "number" then
-        return nil
-    end
-
     if typeof(ply) == "Instance" and ply:IsA("Player") then
         return ply.UserId
     elseif typeof(ply) == "number" then
@@ -64,6 +60,27 @@ end
 
 -- Player Management
 
+function module:GetGroupsPlayerIsIn(ply)
+    local userId = ToUserId(ply)
+    local groups = module:GetGroups()
+
+    local gs = {}
+
+    for name, groupData in pairs(groups) do
+        local plys = groupData.Players 
+        if plys then
+            for _, ply in pairs(plys) do
+                print(ply, userId)
+                if ply == userId then
+                    table.insert(gs, module:AsObject(i))
+                end
+            end
+        end
+    end
+
+    return gs
+end
+
 function module:AddPlayerToGroup(userId, groupName)
     return GroupManagerModule:AddPlayerToGroup(userId, groupName)
 end
@@ -79,7 +96,7 @@ end
 function module:IsPlayerInGroup(groupName, ply)
     local players = module:GetPlayersInGroup(groupName)
     local uid = ToUserId(ply)
-
+    
     for _, userid in pairs(players) do
         if userid == uid then
             return true
@@ -103,6 +120,7 @@ function module:RemovePermissionFromGroup(permission, groupName)
 end
 
 function module:DoesGroupHavePermission(groupName, perm)
+    --[[
     local players = module:GetPermissions(groupName)
 
     for _, permission in pairs(players) do
@@ -112,6 +130,8 @@ function module:DoesGroupHavePermission(groupName, perm)
     end
 
     return false
+    --]]
+    return GroupManagerModule:HasPermission(groupName, perm)
 end
 
 -- Object Oriented Programming
@@ -128,7 +148,7 @@ function module:AsObject(groupName)
     end
 
     function group:IsPlayerIn(ply)
-        return module:IsPlayerInGroup(group.Name, ply)
+        return module:IsPlayerInGroup(group.Name, ToUserId(ply))
     end
 
     function group:RemovePlayer(ply)

@@ -86,7 +86,7 @@ function module:AddPlayerToGroup(userId, groupName)
             return false
         end
     end
-
+    
     table.insert(plys, userId)
 
     return true
@@ -114,6 +114,15 @@ function module:RemovePlayerFromGroup(userId, groupName)
     table.remove(plys, index)
 
     return true
+end
+
+function module:GetPlayersInGroup(groupName, asUserIds)
+    if not groups[groupName] then
+        return nil
+    end
+
+    local plys = groups[groupName]["Players"]
+    return plys
 end
 
 -- Permission Management

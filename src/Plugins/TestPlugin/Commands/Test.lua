@@ -7,9 +7,10 @@ module.Description = "A test command."
 module.Category = "Test Category"
 
 module.PermissionsNeeded = {
-	"perm_name"
+	
 } -- or just a string
 -- The permissions required to use this command.
+-- TODO: Allow place owners to specify custom permissions.
 
 --[[
 	Target - A Player argument, in the cmd you would put in the username or userid.
@@ -57,14 +58,12 @@ function module:Run(sender, args)
 	local target = args[1]
 	local dmg = args[2]
 	
-	local char = target:GetPlayer().Character	
-	
-	print("Test")
+	local char = target.Character
 
 	if char and char:FindFirstChild("Humanoid") and char:FindFirstChild("Humanoid").Health > 0 then
 		char:FindFirstChild("Humanoid").Health = char:FindFirstChild("Humanoid").Health - dmg
 		
-		sender:Tell("Test")
+		sender:TellWithPrefix("Test")
 	end	
 	
 	return true

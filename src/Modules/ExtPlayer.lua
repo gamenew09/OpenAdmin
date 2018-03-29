@@ -1,6 +1,7 @@
 local m = {}
 
 local GroupManager = require(script.Parent:WaitForChild("GroupManager"))
+local Settings = require(script.Parent:WaitForChild("Settings"))
 
 function m.new(speaker, channelName)
 	local pl = {}
@@ -52,6 +53,13 @@ function m.new(speaker, channelName)
 		pl.SpeakerObject:SendSystemMessage(msg, ch)
 		return true
 	end
+
+	--[[
+		Tells a user a message. The prefix for the Admin Commands (Most likely "[OpenAdmin]" unless you changed a setting) will be added to the message.
+	--]]
+	function pl:TellWithPrefix(msg)
+		return pl:Tell(string.format("[%s] %s", Settings["BrandingName"] or "OpenAdmin", msg))
+	end
 	
 	pl["__index"] = function (t, k)
 		return pl[k]
@@ -64,8 +72,12 @@ function m.new(speaker, channelName)
 	return setmetatable({}, pl)
 end
 
-function m.fromPlayer(ply)
-	return m.new({["GetPlayer"] = function () return ply end }) -- Yes, I just did a hack for a hack of metatables.
+function m.fromPlayer(ply, chatService)
+	if chatService then
+		return m.new(chatService:GetSpeaker(ply.Name))
+	else
+		return m.new({["GetPlayer"] = function () return ply end }) -- Yes, I just did a hack for a hack of metatables.
+	end
 end
 
 return m

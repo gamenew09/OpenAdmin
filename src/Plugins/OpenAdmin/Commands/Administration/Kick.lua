@@ -2,7 +2,7 @@ local module = {}
 
 module.CommandName = "kick"
 module.DisplayName = "Kick"
-module.Description = "Kick another player"
+module.Description = "Removes the player from the server."
 
 module.Category = "Administration"
 
@@ -42,6 +42,7 @@ module.ArgumentSchema = {
 		["Name"] = "player",
 		["Arguments"] = {
 			["DisallowSpecial"] = false, -- Should we disallow "me"
+			["IgnoreSelf"] = true, -- If the user passes in themselves as an argument (their name, their userid, or "me" [if DisallowSpecial is false]) should we treat it as an invalid target?
 			["IgnoreGroupOrder"] = false -- Should we allow users to target anyone? (false, allow targeting anyone)
 		}
 	},
@@ -59,9 +60,9 @@ function module:Run(sender, args)
 	local target = args[1]
 	local reason = args[2]
 	
-	target:GetPlayer():Kick(reason or "You have been kicked.")	
+	target:Kick(reason or "You have been kicked.")	
 	
-	sender:Tell(string.format("Kicked %s for reason \"%s\"", target.Name, reason or "No Reason Specified"))
+	sender:TellWithPrefix(string.format("Kicked %s for reason \"%s\"", target.Name, reason or "No Reason Specified"))
 	
 	return true
 end

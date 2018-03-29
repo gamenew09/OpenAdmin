@@ -14,6 +14,8 @@ return function (ChatService)
 		
 		return ChatManager:OnChat(speaker, message, channel)
 	end
+
+	ChatManager:SetChatService(ChatService) -- Give an instance of the ChatService to ChatManager.
  
 	ChatService:RegisterProcessCommandsFunction("OpenAdminCommand", onOpenAdminCommand)
 end

@@ -10,5 +10,11 @@
         "Type": "Int",
         "Default": 0,
         "Root": true
+    },
+    {
+        "Name": "BrandingName",
+        "Type": "String",
+        "Default": "OpenAdmin",
+        "Root": true
     }
 ]

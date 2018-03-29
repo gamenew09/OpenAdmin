@@ -24,9 +24,19 @@ function OpenAdmin:GroupsInitialized() -- Called when the GroupManager has been 
 
 	local everyoneGroup = GM:AsObject("Everyone")
 
-	game.Players.PlayerAdded:connect(function (ply)
-		
-	end)
+	local function onPlayerAdded(ply)
+		print("Player Added")
+		if not everyoneGroup:IsPlayerIn(ply) then
+			print("Group")
+			everyoneGroup:AddPlayer(ply)
+		end
+	end
+
+	game.Players.PlayerAdded:connect(onPlayerAdded)
+
+	for _, ply in pairs(game.Players:GetPlayers()) do
+		onPlayerAdded(ply)
+	end
 end
 
 return OpenAdmin
